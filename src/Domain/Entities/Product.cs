@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using POS.Domain.Common;
 using POS.Domain.Entities.Selling;
 using POS.Domain.Enums;
@@ -7,8 +7,7 @@ namespace POS.Domain.Entities;
 
 public class Product : BaseEntity
 {
-    [Required]
-    [StringLength(100)]
+    [Required, StringLength(100)]
     public string Name { get; set; } = string.Empty;
     public decimal WarningAmount { get; set; }
     [StringLength(200)]
@@ -20,7 +19,7 @@ public class Product : BaseEntity
     public MeasurmentType MeasurmentType { get; set; }
     [Required]
     public int CategoryId { get; set; }
-    public Category Category = new();
+    public Category? Category { get; set; }
 
-    public IEnumerable<ProductItem> ProductItems = new List<ProductItem>();
+    public ICollection<ProductItem> ProductItems { get; set; } = new List<ProductItem>();
 }

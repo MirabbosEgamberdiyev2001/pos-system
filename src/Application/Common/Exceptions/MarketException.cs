@@ -1,10 +1,8 @@
-﻿namespace POS.Application.Common.Exceptions;
+namespace POS.Application.Common.Exceptions;
+
 public class MarketException : Exception
 {
-    public readonly string ErrorMessage;
-
-    public MarketException(string message)
+    public MarketException(string message) : base(message)
     {
-        ErrorMessage = message;
     }
 }

@@ -1,6 +1,9 @@
-﻿using POS.Application.Common.DataTransferObjects.ReceiptDtos;
+using Microsoft.Extensions.Logging;
+using POS.Application.Common.DataTransferObjects.ReceiptDtos;
 using POS.Application.Common.DataTransferObjects.TransactionDtos;
+using POS.Application.Common.Models;
 using POS.Application.Interfaces;
+using POS.Domain.Entities.Selling;
 using POS.Domain.Interfaces;
 
 namespace POS.Application.Services;
@@ -8,14 +11,69 @@ namespace POS.Application.Services;
 public class ReceiptService : IReceiptService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<ReceiptService> _logger;
 
-    public ReceiptService(IUnitOfWork unitOfWork)
+    public ReceiptService(IUnitOfWork unitOfWork, ILogger<ReceiptService> logger)
     {
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
-    public Task<ReceiptDto> AddAsync(AddReceiptDto receiptDto, List<ReceiptItemDto> items)
+    public async Task<ReceiptDto> AddAsync(AddReceiptDto receiptDto, List<ReceiptItemDto> items)
     {
-        throw new NotImplementedException();
+        if (receiptDto == null) throw new ArgumentNullException(nameof(receiptDto));
+        if (items == null || items.Count == 0) throw new ArgumentException("Savat bo'sh bo'lishi mumkin emas", nameof(items));
+        if (receiptDto.SellerId <= 0) throw new ArgumentException("Seller ID noto'g'ri", nameof(receiptDto));
+
+        var totalCalculated = items.Sum(i => i.TotalPrice);
+        var paid = receiptDto.PaidCash + receiptDto.PaidCard;
+
+        if (paid < totalCalculated)
+            throw new InvalidOperationException($"To'lov yetarli emas. Kerak: {totalCalculated:N2}, To'landi: {paid:N2}");
+
+        var receipt = (Receipt)receiptDto;
+        receipt.TotalPrice = totalCalculated;
+        var savedReceipt = await _unitOfWork.Receipts.AddAsync(receipt);
+
+        foreach (var item in items)
+        {
+            var transaction = new Transaction
+            {
+                ReceiptId = savedReceipt.Id,
+                ProductId = item.ProductId,
+                ProductName = item.ProductName,
+                ProductPrice = item.ProductPrice,
+                Quantity = item.Quantity,
+                TotalPrice = item.TotalPrice,
+                IsDeleted = false,
+                LastModifiedDate = LocalTime.GetUtc5Time()
+            };
+            await _unitOfWork.Transactions.AddAsync(transaction);
+
+            // Mahsulot ombor qoldig'ini kamaytirish
+            var product = await _unitOfWork.Products.GetByIdAsync(item.ProductId);
+            if (product != null)
+            {
+                product.Amount = Math.Max(0, product.Amount - item.Quantity);
+                await _unitOfWork.Products.UpdateAsync(product);
+            }
+        }
+
+        _logger.LogInformation("Yangi chek yaratildi. ReceiptId={ReceiptId}, SellerId={SellerId}, Total={Total}",
+            savedReceipt.Id, receiptDto.SellerId, savedReceipt.TotalPrice);
+
+        return (ReceiptDto)savedReceipt;
+    }
+
+    public async Task<IEnumerable<ReceiptDto>> GetAllAsync()
+    {
+        var receipts = await _unitOfWork.Receipts.GetAllAsync();
+        return receipts.Select(r => (ReceiptDto)r);
+    }
+
+    public async Task<ReceiptDto?> GetByIdAsync(int id)
+    {
+        var receipt = await _unitOfWork.Receipts.GetByIdAsync(id);
+        return receipt == null ? null : (ReceiptDto)receipt;
     }
 }

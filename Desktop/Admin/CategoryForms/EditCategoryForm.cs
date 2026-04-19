@@ -50,7 +50,7 @@ namespace Desktop.Admin.CategoryForms
             }
             catch (MarketException ex)
             {
-                new Toastr().ShowError(ex.ErrorMessage);
+                new Toastr().ShowError(ex.Message);
             }
             catch (Exception)
             {
@@ -77,7 +77,7 @@ namespace Desktop.Admin.CategoryForms
             }
             catch (MarketException ex)
             {
-                new Toastr().ShowError(ex.ErrorMessage);
+                new Toastr().ShowError(ex.Message);
             }
             catch (Exception)
             {

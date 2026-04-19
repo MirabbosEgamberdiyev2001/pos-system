@@ -1,5 +1,5 @@
 ﻿using Desktop.Admin;
-using Microsoft.Extensions.DependencyInjection;
+using Desktop.Seller;
 using POS.Application.Common.Enums;
 using POS.Application.Interfaces;
 
@@ -60,9 +60,10 @@ public partial class Login : Form
                     break;
                 case UserRoles.Seller:
                     {
-                        AdminForm admin = new(_businessUnit);
+                        // Seller uchun maxsus dashboard — sotuv paneli
+                        var seller = new SellerDashboard(_businessUnit, sellerId: 0);
                         Hide();
-                        admin.ShowDialog();
+                        seller.ShowDialog();
                         Close();
                     }
                     break;

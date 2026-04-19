@@ -52,7 +52,7 @@ public partial class AddProductItemForm : Form
         }
         catch (MarketException ex)
         {
-            new Toastr().ShowError(ex.ErrorMessage);
+            new Toastr().ShowError(ex.Message);
         }
         catch (Exception ex)
         {

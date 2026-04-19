@@ -1,8 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using POS.Domain.Common;
 using POS.Domain.Entities.Auth;
 
 namespace POS.Domain.Entities.Selling;
+
 public class Receipt : BaseEntity
 {
     [Required]
@@ -13,9 +14,8 @@ public class Receipt : BaseEntity
     public decimal PaidCard { get; set; }
 
     [Required]
-    public string SellerId { get; set; } = string.Empty;
-    [Required]
-    public User Seller = new();
+    public int SellerId { get; set; }
+    public User? Seller { get; set; }
 
-    public IEnumerable<Transaction> Transactions = new List<Transaction>();
+    public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 }

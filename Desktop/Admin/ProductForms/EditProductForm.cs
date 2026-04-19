@@ -58,7 +58,7 @@ public partial class EditProductForm : Form
         }
         catch (MarketException ex)
         {
-            new Toastr().ShowError(ex.ErrorMessage);
+            new Toastr().ShowError(ex.Message);
         }
         catch (Exception ex)
         {
@@ -85,7 +85,7 @@ public partial class EditProductForm : Form
         }
         catch (MarketException ex)
         {
-            new Toastr().ShowError(ex.ErrorMessage);
+            new Toastr().ShowError(ex.Message);
         }
         catch (Exception)
         {

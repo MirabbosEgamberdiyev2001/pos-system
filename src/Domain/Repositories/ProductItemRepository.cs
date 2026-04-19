@@ -1,10 +1,11 @@
-﻿using DataLayer.Repositories;
+using DataLayer.Repositories;
 using Microsoft.EntityFrameworkCore;
 using POS.Domain.DataContext;
 using POS.Domain.Entities;
 using POS.Domain.Interfaces;
 
 namespace POS.Domain.Repositories;
+
 public class ProductItemRepository : Repository<ProductItem>, IProductItemInterface
 {
     public ProductItemRepository(ApplicationDbContext dbContext) : base(dbContext)
@@ -15,4 +16,9 @@ public class ProductItemRepository : Repository<ProductItem>, IProductItemInterf
         => await _dbContext.ProductItems
                            .Include(p => p.Product)
                            .ToListAsync();
+
+    public async Task<ProductItem?> GetByIdWithProductAsync(int id)
+        => await _dbContext.ProductItems
+                           .Include(p => p.Product)
+                           .FirstOrDefaultAsync(p => p.Id == id);
 }

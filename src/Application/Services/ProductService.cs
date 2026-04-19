@@ -1,4 +1,5 @@
 ﻿
+using Microsoft.Extensions.Logging;
 using POS.Application.Common.DataTransferObjects.ProductDtos;
 using POS.Application.Common.Enums;
 using POS.Application.Common.Exceptions;
@@ -13,10 +14,12 @@ namespace POS.Application.Services;
 public class ProductService : IProductService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<ProductService> _logger;
 
-    public ProductService(IUnitOfWork unitOfWork)
+    public ProductService(IUnitOfWork unitOfWork, ILogger<ProductService> logger)
     {
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task ActionAsync(int id, ActionType action)
@@ -88,15 +91,17 @@ public class ProductService : IProductService
     public async Task<string> GenerateBarcodeAsync()
     {
         var products = await _unitOfWork.Products.GetAllAsync();
-        var barcodes = products.Select(p => p.Barcode).ToList();
-        Random random = new();
-        goBack: var randomBarcode = random.NextInt64(1000000000000, 9999999999999);
-        if (barcodes.Any(b => b == randomBarcode.ToString()))
-        {
-            goto goBack;
-        }
+        var existingBarcodes = products.Select(p => p.Barcode).ToHashSet();
+        var random = new Random();
 
-        return randomBarcode.ToString();
+        string barcode;
+        do
+        {
+            barcode = random.NextInt64(1000000000000, 9999999999999).ToString();
+        }
+        while (existingBarcodes.Contains(barcode));
+
+        return barcode;
     }
 
     /// <summary>

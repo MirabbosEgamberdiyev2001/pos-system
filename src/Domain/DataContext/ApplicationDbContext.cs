@@ -1,18 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using POS.Domain.Entities.Selling;
 using POS.Domain.Entities;
 using POS.Domain.Entities.Auth;
-using POS.Domain.Enums;
 
 namespace POS.Domain.DataContext;
 
 public class ApplicationDbContext : DbContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options) 
-    {
-        Database.EnsureCreated();
-    }
+        : base(options) { }
 
     public DbSet<Category> Categories { get; set; }
     public DbSet<Product> Products { get; set; }
@@ -35,6 +31,38 @@ public class ApplicationDbContext : DbContext
                .HasForeignKey(p => p.ProductId)
                .OnDelete(DeleteBehavior.NoAction);
 
+        builder.Entity<Receipt>()
+               .HasOne(r => r.Seller)
+               .WithMany()
+               .HasForeignKey(r => r.SellerId)
+               .OnDelete(DeleteBehavior.NoAction);
+
+        builder.Entity<Receipt>()
+               .HasMany(r => r.Transactions)
+               .WithOne()
+               .HasForeignKey(t => t.ReceiptId)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ProductItem>()
+               .HasOne(p => p.Admin)
+               .WithMany()
+               .HasForeignKey(p => p.AdminId)
+               .OnDelete(DeleteBehavior.NoAction);
+
+        // Decimal precision
+        builder.Entity<Product>().Property(p => p.Amount).HasPrecision(18, 4);
+        builder.Entity<Product>().Property(p => p.WarningAmount).HasPrecision(18, 4);
+
+        builder.Entity<ProductItem>().Property(p => p.Amount).HasPrecision(18, 4);
+        builder.Entity<ProductItem>().Property(p => p.BuyingPrice).HasPrecision(18, 2);
+        builder.Entity<ProductItem>().Property(p => p.SellingPrice).HasPrecision(18, 2);
+
+        builder.Entity<Receipt>().Property(r => r.TotalPrice).HasPrecision(18, 2);
+        builder.Entity<Receipt>().Property(r => r.PaidCash).HasPrecision(18, 2);
+        builder.Entity<Receipt>().Property(r => r.PaidCard).HasPrecision(18, 2);
+
+        builder.Entity<Transaction>().Property(t => t.ProductPrice).HasPrecision(18, 2);
+        builder.Entity<Transaction>().Property(t => t.TotalPrice).HasPrecision(18, 2);
 
         builder.Entity<Category>()
             .HasData(new Category()
@@ -42,24 +70,8 @@ public class ApplicationDbContext : DbContext
                 Id = 1,
                 Name = "Default Category",
                 IsDeleted = false,
-                LastModifiedDate = DateTime.Now
+                LastModifiedDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             });
-
-        builder.Entity<User>()
-               .HasData(new List<User>()
-               {
-                   new User()
-                   {
-                       Id = 1,
-                       FirstName = "Super",
-                       LastName = "Admin",
-                       PhoneNumber = "998901234567",
-                       IsDeleted = false,
-                       LastModifiedDate = DateTime.Now,
-                       PasswordHash = "QWRtaW4uMTIzJA==",
-                       Role = Enums.Role.SuperAdmin
-                   }
-               });
 
         base.OnModelCreating(builder);
     }
