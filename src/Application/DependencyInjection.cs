@@ -17,6 +17,9 @@ public static class DependencyInjection
         // FluentValidation
         services.AddValidatorsFromAssemblyContaining<AddCategoryDtoValidator>();
 
+        // In-memory cache (CategoryService, ProductService uchun)
+        services.AddMemoryCache();
+
         // Services
         services.AddTransient<ICategoryService, CategoryService>();
         services.AddTransient<IProductService, ProductService>();

@@ -20,7 +20,8 @@ public class MappingProfile : Profile
 
         // Product
         CreateMap<Product, ProductDto>()
-            .ForMember(d => d.Category, opt => opt.MapFrom(s => s.Category));
+            .ForMember(d => d.Category, opt => opt.MapFrom(s => s.Category))
+            .ForMember(d => d.IsDeleted, opt => opt.MapFrom(s => s.IsDeleted));
         CreateMap<AddProductDto, Product>()
             .ForMember(d => d.Amount, opt => opt.MapFrom(_ => 0m))
             .ForMember(d => d.LastModifiedDate, opt => opt.MapFrom(_ => DateTime.UtcNow));

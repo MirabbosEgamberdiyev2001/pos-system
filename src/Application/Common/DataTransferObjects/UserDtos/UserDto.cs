@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using POS.Application.Common.Models;
 
 namespace POS.Application.Common.DataTransferObjects.UserDtos;
@@ -10,6 +10,5 @@ public class UserDto : BaseModel
     public string LastName { get; set; } = string.Empty;
     [StringLength(15)]
     public string PhoneNumber { get; set; } = string.Empty;
-    [Required]
-    public string PasswordHash { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
 }

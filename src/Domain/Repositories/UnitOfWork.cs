@@ -1,4 +1,5 @@
-﻿using POS.Domain.DataContext;
+using Microsoft.EntityFrameworkCore.Storage;
+using POS.Domain.DataContext;
 using POS.Domain.Interfaces;
 
 namespace DataLayer.Repositories;
@@ -25,17 +26,18 @@ public class UnitOfWork : IUnitOfWork
     }
 
     public IProductInterface Products { get; }
-
     public IReceiptInterface Receipts { get; }
-
     public ITransactionInterface Transactions { get; }
-
     public ICategoryInterface Categories { get; }
-
     public IProductItemInterface ProductItems { get; }
-
     public IUserInterface Users { get; }
 
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        => _dbContext.SaveChangesAsync(cancellationToken);
+
+    public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        => _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
     public void Dispose()
-            => GC.SuppressFinalize(this);
+        => GC.SuppressFinalize(this);
 }

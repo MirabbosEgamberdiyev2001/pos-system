@@ -1,6 +1,5 @@
 ﻿using Desktop.Extended;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using POS.Application.Common.DataTransferObjects.CategoryDtos;
 using POS.Application.Common.Enums;
 using POS.Application.Common.Models;
@@ -10,37 +9,38 @@ namespace Desktop.Admin.CategoryForms;
 public partial class CategoryTable : UserControl
 {
     private readonly List<CategoryDto> _categories = new();
-    private IBusinessUnit _businessUnit;
+    private readonly IBusinessUnit _businessUnit;
     private int selectedId = 0;
     private State selected = State.All;
+
+    // Search debounce timer
+    private readonly System.Windows.Forms.Timer _searchDebounce = new() { Interval = 300 };
 
     public CategoryTable(IBusinessUnit businessUnit)
     {
         InitializeComponent();
         _businessUnit = businessUnit;
         InfoCategory.SelectedIndex = 0;
+        _searchDebounce.Tick += async (s, e) =>
+        {
+            _searchDebounce.Stop();
+            await SearchCategories(search_textbox.Text);
+        };
     }
 
     /// <summary>
     /// CategoryTable load event - fill table with categories
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="e"></param>
     private async void CategoryTable_Load(object sender, EventArgs e)
     {
-        _businessUnit = Configuration.GetServiceProvider()
-                                     .GetRequiredService<IBusinessUnit>();
         await Task.Run(() => FillCategories(selected));
     }
 
     /// <summary>
     /// Fill table with categories
     /// </summary>
-    /// <returns></returns>
     private async Task FillCategories(State selected)
     {
-        _businessUnit = Configuration.GetServiceProvider()
-                                     .GetRequiredService<IBusinessUnit>();
         var list = selected switch
         {
             State.Active => await _businessUnit.CategoryService.GetAllActivesAsync(),
@@ -149,26 +149,30 @@ public partial class CategoryTable : UserControl
     }
 
 
-    private async void search_textbox_TextChanged(object sender, EventArgs e)
+    private void search_textbox_TextChanged(object sender, EventArgs e)
+    {
+        _searchDebounce.Stop();
+        _searchDebounce.Start();
+    }
+
+    private async Task SearchCategories(string text)
     {
         try
         {
-            if (!string.IsNullOrEmpty(search_textbox.Text))
+            if (!string.IsNullOrEmpty(text))
             {
                 var filter = await _businessUnit.CategoryService
-                                                .FilterByNameAsync(search_textbox.Text, selected);
-                var searchResult = filter.Select(i => new { Id = i.Id, Nomi = i.Name })
-                                         .ToList();
-
-                if (searchResult != null && searchResult.Any())
-                {
-                    table.DataSource = searchResult;
-                }
-                else
-                {
-                    table.DataSource = new List<CategoryDto>();
-                    new Toastr().ShowWarning("Bunday kategoriya mavjud emas");
-                }
+                                                .FilterByNameAsync(text, selected);
+                var searchResult = filter.Select(i => new { Id = i.Id, Nomi = i.Name }).ToList();
+                if (IsHandleCreated)
+                    table.BeginInvoke(() =>
+                    {
+                        table.DataSource = searchResult.Any()
+                            ? (object)searchResult
+                            : new List<object>();
+                        if (!searchResult.Any())
+                            new Toastr().ShowWarning("Bunday kategoriya mavjud emas");
+                    });
             }
             else
             {
@@ -177,7 +181,7 @@ public partial class CategoryTable : UserControl
         }
         catch (Exception)
         {
-            new Toastr().ShowError("Xatolik yuz berdi");
+            if (IsHandleCreated) table.BeginInvoke(() => new Toastr().ShowError("Xatolik yuz berdi"));
         }
     }
 

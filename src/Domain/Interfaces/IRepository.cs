@@ -1,4 +1,6 @@
-﻿namespace POS.Domain.Interfaces;
+using System.Linq.Expressions;
+
+namespace POS.Domain.Interfaces;
 
 public interface IRepository<TEntity> where TEntity : class
 {
@@ -7,4 +9,5 @@ public interface IRepository<TEntity> where TEntity : class
     Task<TEntity> AddAsync(TEntity entity);
     Task<TEntity> UpdateAsync(TEntity entity);
     Task RemoveAsync(TEntity entity);
+    Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate);
 }

@@ -31,11 +31,18 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build
+      - name: Build (Release)
         run: dotnet build --no-restore --configuration Release
 
-      - name: Run unit tests
-        run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+      - name: Run unit tests with coverage
+        run: >
+          dotnet test
+          --no-build
+          --configuration Release
+          --verbosity normal
+          --logger "trx;LogFileName=test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./coverage
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -43,6 +50,13 @@ jobs:
         with:
           name: test-results
           path: '**/*.trx'
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: ./coverage
 
   publish:
     name: Publish Release

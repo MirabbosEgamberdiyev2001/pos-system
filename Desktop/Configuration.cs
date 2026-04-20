@@ -1,32 +1,61 @@
-﻿using DataLayer.Repositories;
+using DataLayer.Repositories;
 using Desktop.Auth;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using POS.Application;
 using POS.Application.Interfaces;
-using POS.Application.Services;
 using POS.Domain.Interfaces;
 using POS.Domain.Repositories;
+using Serilog;
 
 namespace Desktop;
+
+/// <summary>
+/// Legacy static service provider — faqat eskilik uchun saqlanmoqda.
+/// Yangi kod uchun constructor injection ishlatilsin.
+/// </summary>
 public static class Configuration
 {
+    private static IServiceProvider? _cachedProvider;
+
     public static IServiceProvider GetServiceProvider()
     {
+        if (_cachedProvider != null) return _cachedProvider;
+
+        var configPath = AppDomain.CurrentDomain.BaseDirectory;
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(configPath)
+            .AddJsonFile("appsettings.json", optional: false)
+            .AddEnvironmentVariables()
+            .Build();
+
         var services = new ServiceCollection();
-
-        ConfigureServices(services);
-
-        return services.BuildServiceProvider();
+        ConfigureServices(services, configuration);
+        _cachedProvider = services.BuildServiceProvider();
+        return _cachedProvider;
     }
 
-    private static void ConfigureServices(ServiceCollection services)
+    private static void ConfigureServices(ServiceCollection services, IConfiguration configuration)
     {
-        const string connectionString = "Server=(localdb)\\mssqllocaldb;Database=PosDB;";
+        var connectionString = configuration.GetConnectionString("Default")
+            ?? "Server=(localdb)\\mssqllocaldb;Database=PosDB;Trusted_Connection=True;MultipleActiveResultSets=true";
+
+        services.AddSingleton<IConfiguration>(configuration);
+
         services.AddDbContext<POS.Domain.DataContext.ApplicationDbContext>(options =>
-            {
-                options.UseSqlServer(connectionString, o => o.EnableRetryOnFailure());
-                options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-            }, ServiceLifetime.Transient, ServiceLifetime.Transient);
+        {
+            options.UseSqlServer(connectionString, o => o.EnableRetryOnFailure());
+            options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        }, ServiceLifetime.Transient, ServiceLifetime.Transient);
+
+        // Logging — ILogger<T> uchun zarur
+        services.AddLogging(builder =>
+        {
+            builder.ClearProviders();
+            builder.AddSerilog(dispose: false);
+        });
 
         services.AddTransient<ICategoryInterface, CategoryRepository>();
         services.AddTransient<IProductInterface, ProductRepository>();
@@ -34,13 +63,10 @@ public static class Configuration
         services.AddTransient<IReceiptInterface, ReceiptRepository>();
         services.AddTransient<ITransactionInterface, TransactionRepository>();
         services.AddTransient<IUnitOfWork, UnitOfWork>();
-        services.AddTransient<ICategoryService, CategoryService>();
-        services.AddTransient<IProductService, ProductService>();
-        services.AddTransient<IProductItemService, ProductItemService>();
-        services.AddTransient<IReceiptService, ReceiptService>();
         services.AddTransient<IUserInterface, UserRepository>();
-        services.AddTransient<IAuthService, AuthService>();
-        services.AddTransient<IBusinessUnit, BusinessUnit>();
+
+        // Application services (AutoMapper, FluentValidation, MemoryCache, barcha servicelar)
+        services.AddApplicationServices();
 
         services.AddScoped<StartForm>();
         services.AddScoped<Login>();

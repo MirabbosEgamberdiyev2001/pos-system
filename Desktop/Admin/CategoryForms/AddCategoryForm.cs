@@ -1,5 +1,4 @@
 ﻿using Desktop.Extended;
-using Microsoft.Extensions.DependencyInjection;
 using POS.Application.Common.DataTransferObjects.CategoryDtos;
 using POS.Application.Common.Exceptions;
 using POS.Application.Interfaces;
@@ -7,7 +6,7 @@ using POS.Application.Interfaces;
 namespace Desktop.Admin.CategoryForms;
 public partial class AddCategoryForm : Form
 {
-    private IBusinessUnit _businessUnit;
+    private readonly IBusinessUnit _businessUnit;
 
     public AddCategoryForm(IBusinessUnit businessUnit)
     {
@@ -43,16 +42,7 @@ public partial class AddCategoryForm : Form
     {
         try
         {
-            await Task.Run(async () =>
-            {
-                _businessUnit = Configuration.GetServiceProvider()
-                                                .GetRequiredService<IBusinessUnit>();
-                await _businessUnit.CategoryService
-                                            .AddAsync(new AddCategoryDto()
-                                            {
-                                                Name = name_textbox.Text
-                                            });
-            });
+            await _businessUnit.CategoryService.AddAsync(new AddCategoryDto { Name = name_textbox.Text });
             DialogResult = DialogResult.OK;
             Close();
         }
