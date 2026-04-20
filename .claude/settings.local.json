@@ -1,16 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find ./tests -type f -name \"*.csproj\" -exec cat {} \\\\;)",
-      "Bash(find . -type f -name \"*.gitignore\" -exec cat {} \\\\;)",
       "Bash(dotnet restore *)",
       "Bash(dotnet build *)",
       "Bash(dotnet ef *)",
       "Bash(dotnet tool *)",
-      "Bash(export PATH=\"$PATH:/c/Users/mirabbos.egamberdiye/.dotnet/tools\")",
       "Bash(dotnet-ef migrations *)",
-      "Bash(find \"D:/DotNetProjects/POS-Desktop/.claude/worktrees/interesting-mendeleev-83b980/src/Application/Common/Enums\" -name \"*.cs\" -exec grep -l \"ActionType\" {} \\\\;)",
-      "Bash(dotnet test *)"
+      "Bash(dotnet test *)",
+      "Bash(dotnet run *)",
+      "Bash(dotnet sln *)",
+      "Bash(C:/Users/mirabbos.egamberdiye/.dotnet/tools/dotnet-ef.exe migrations *)"
     ]
   }
 }

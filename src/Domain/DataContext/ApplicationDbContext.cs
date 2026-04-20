@@ -19,9 +19,10 @@ public class ApplicationDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        // --- Relationships ---
         builder.Entity<Category>()
-               .HasMany(p => p.Products)
-               .WithOne(c => c.Category)
+               .HasMany(c => c.Products)
+               .WithOne(p => p.Category)
                .HasForeignKey(p => p.CategoryId)
                .OnDelete(DeleteBehavior.NoAction);
 
@@ -49,7 +50,7 @@ public class ApplicationDbContext : DbContext
                .HasForeignKey(p => p.AdminId)
                .OnDelete(DeleteBehavior.NoAction);
 
-        // Decimal precision
+        // --- Decimal precision ---
         builder.Entity<Product>().Property(p => p.Amount).HasPrecision(18, 4);
         builder.Entity<Product>().Property(p => p.WarningAmount).HasPrecision(18, 4);
 
@@ -64,12 +65,32 @@ public class ApplicationDbContext : DbContext
         builder.Entity<Transaction>().Property(t => t.ProductPrice).HasPrecision(18, 2);
         builder.Entity<Transaction>().Property(t => t.TotalPrice).HasPrecision(18, 2);
 
+        // --- Phase 5A: Category.Name — DB constraint nvarchar(50) + index ---
         builder.Entity<Category>()
-            .HasData(new Category()
+               .Property(c => c.Name)
+               .HasMaxLength(50)
+               .IsRequired();
+        builder.Entity<Category>()
+               .HasIndex(c => c.Name)
+               .HasDatabaseName("IX_Categories_Name");
+
+        // --- Phase 5C: Product.Barcode — unique index ---
+        builder.Entity<Product>()
+               .Property(p => p.Barcode)
+               .HasMaxLength(13);
+        builder.Entity<Product>()
+               .HasIndex(p => p.Barcode)
+               .IsUnique()
+               .HasFilter("[Barcode] IS NOT NULL")
+               .HasDatabaseName("IX_Products_Barcode_Unique");
+
+        // --- Seed data ---
+        builder.Entity<Category>()
+            .HasData(new Category
             {
-                Id = 1,
-                Name = "Default Category",
-                IsDeleted = false,
+                Id               = 1,
+                Name             = "Default Category",
+                IsDeleted        = false,
                 LastModifiedDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             });
 

@@ -1,4 +1,4 @@
-﻿using Desktop.Admin;
+using Desktop.Admin;
 using Desktop.Seller;
 using POS.Application.Common.Enums;
 using POS.Application.Interfaces;
@@ -19,8 +19,6 @@ public partial class Login : Form
     /// <summary>
     /// back to start form
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="e"></param>
     private void guna2Button2_Click(object sender, EventArgs e)
     {
         StartForm start = new(_businessUnit);
@@ -32,24 +30,15 @@ public partial class Login : Form
     /// <summary>
     /// login
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="e"></param>
     private async void guna2Button1_Click(object sender, EventArgs e)
     {
         string phone = phoneNumber.Text.Replace("+", "").Replace("-", "").Replace(" ", "");
         var result = await _businessUnit.AuthService.LoginAsync(phone, password.Text, _role);
-        if (result.IsSuccess)
+        if (result.IsSuccess && result.Data != null)
         {
             switch (_role)
             {
                 case UserRoles.Admin:
-                    {
-                        AdminForm admin = new(_businessUnit);
-                        Hide();
-                        admin.ShowDialog();
-                        Close();
-                    }
-                    break;
                 case UserRoles.SuperAdmin:
                     {
                         AdminForm admin = new(_businessUnit);
@@ -60,8 +49,7 @@ public partial class Login : Form
                     break;
                 case UserRoles.Seller:
                     {
-                        // Seller uchun maxsus dashboard — sotuv paneli
-                        var seller = new SellerDashboard(_businessUnit, sellerId: 0);
+                        var seller = new SellerDashboard(_businessUnit, sellerId: result.Data.Id);
                         Hide();
                         seller.ShowDialog();
                         Close();
@@ -71,7 +59,7 @@ public partial class Login : Form
         }
         else
         {
-            MessageBox.Show(result.ErrorMessage);
+            MessageBox.Show(result.ErrorMessage, "Xatolik", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
     }
 

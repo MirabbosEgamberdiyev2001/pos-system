@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
 using POS.Domain.Common;
 using POS.Domain.DataContext;
 using POS.Domain.Interfaces;
@@ -14,6 +15,7 @@ public class Repository<TEntity>
     {
         _dbContext = dbContext;
     }
+
     public async Task<TEntity> AddAsync(TEntity entity)
     {
         var model = await _dbContext.Set<TEntity>().AddAsync(entity);
@@ -42,4 +44,7 @@ public class Repository<TEntity>
         await _dbContext.SaveChangesAsync();
         return model.Entity;
     }
+
+    public async Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate)
+        => await _dbContext.Set<TEntity>().AnyAsync(predicate);
 }

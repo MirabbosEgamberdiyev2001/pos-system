@@ -1,6 +1,5 @@
 using DataLayer.Repositories;
 using Desktop.Admin;
-using Desktop.Admin.CategoryForms;
 using Desktop.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,10 +25,13 @@ internal static class Program
         Application.ThreadException += OnThreadException;
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
-        // --- Configuration ---
+        // --- Configuration (appsettings.json + appsettings.Production.json) ---
+        var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Development";
         var configuration = new ConfigurationBuilder()
             .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+            .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: false)
+            .AddEnvironmentVariables()
             .Build();
 
         // --- Serilog ---
@@ -38,12 +40,15 @@ internal static class Program
 
         try
         {
-            Log.Information("POS dasturi ishga tushmoqda...");
+            Log.Information("POS dasturi ishga tushmoqda... Environment={Env}", environment);
 
             var services = new ServiceCollection();
             ConfigureServices(services, configuration);
 
             var serviceProvider = services.BuildServiceProvider();
+
+            // --- Phase 8C: Startup DB health check ---
+            ValidateStartup(serviceProvider);
 
             // --- Migrations va Seed ---
             ApplyMigrationsAndSeed(serviceProvider);
@@ -52,13 +57,15 @@ internal static class Program
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            var form = serviceProvider.GetRequiredService<AdminForm>();
+            // --- Phase 1A: Login oqimidan boshlanadi ---
+            var form = serviceProvider.GetRequiredService<StartForm>();
             Application.Run(form);
         }
         catch (Exception ex)
         {
-            Log.Fatal(ex, "Dastur kutilmagan xato sababli to'xtatildi");
-            MessageBox.Show($"Kritik xato: {ex.Message}\n\nLog faylini ko'ring.",
+            Log.Fatal(ex, "Dastur kritik xato sababli to'xtatildi");
+            MessageBox.Show(
+                $"Kritik xato: {ex.Message}\n\nLog faylini ko'ring: logs/pos-*.log",
                 "Kritik xato", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
@@ -71,6 +78,9 @@ internal static class Program
     {
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("'Default' connection string topilmadi (appsettings.json).");
+
+        // IConfiguration — DatabaseSeeder uchun
+        services.AddSingleton<IConfiguration>(configuration);
 
         // DbContext — Scoped: bir scope ichida bitta instance
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -94,23 +104,35 @@ internal static class Program
         services.AddTransient<IUnitOfWork, UnitOfWork>();
         services.AddTransient<IUserInterface, UserRepository>();
 
-        // Application services + FluentValidation
+        // Application services + FluentValidation + AutoMapper + MemoryCache
         services.AddApplicationServices();
 
-        // Infrastructure services (BCrypt hasher, kelajakda: email/sms)
+        // Infrastructure services (BCrypt hasher)
         services.AddInfrastructureServices();
 
         // Forms
         services.AddScoped<StartForm>();
         services.AddScoped<Login>();
         services.AddScoped<AdminForm>();
-        services.AddScoped<AddCategoryForm>();
+    }
+
+    private static void ValidateStartup(IServiceProvider serviceProvider)
+    {
+        using var scope = serviceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        if (!db.Database.CanConnect())
+        {
+            throw new InvalidOperationException(
+                "Ma'lumotlar bazasiga ulanib bo'lmadi! " +
+                "Connection string ni appsettings.json da tekshiring.");
+        }
+        Log.Information("Database ulanishi tekshirildi — muvaffaqiyatli");
     }
 
     private static void ApplyMigrationsAndSeed(IServiceProvider serviceProvider)
     {
         using var scope = serviceProvider.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var db     = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ApplicationDbContext>>();
 
         try
@@ -132,7 +154,8 @@ internal static class Program
     private static void OnThreadException(object sender, System.Threading.ThreadExceptionEventArgs e)
     {
         Log.Error(e.Exception, "UI thread xatosi");
-        MessageBox.Show($"Xatolik yuz berdi:\n{e.Exception.Message}\n\nIlova davom etmoqda.",
+        MessageBox.Show(
+            $"Xatolik yuz berdi:\n{e.Exception.Message}\n\nIlova davom etmoqda.",
             "Xato", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 
